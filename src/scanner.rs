@@ -1,4 +1,4 @@
-use crate::token::{Token, TokenType};
+use crate::token::{Token, TokenKind};
 use std::str::FromStr;
 
 pub struct Scanner {
@@ -72,7 +72,7 @@ impl Scanner{
             self.source.update_start();
             self.scan_token();
         }
-        // let end_token = Token::new(TokenType::EOF, None, None, line);
+        // let end_token = Token::new(TokenKind::EOF, None, None, line);
         // self.tokens.push(end_token);
     }
 
@@ -83,50 +83,50 @@ impl Scanner{
     fn scan_token(&mut self) {
         if let Some(ch) = self.source.next() {
             let token_type = match ch {
-                '(' => Some(TokenType::LeftParen),
-                ')' => Some(TokenType::RightParent),
-                '{' => Some(TokenType::LeftBrace),
-                '}' => Some(TokenType::RightBrace),
-                ',' => Some(TokenType::Comma),
-                '.' => Some(TokenType::Dot),
-                '-' => Some(TokenType::Minus),
-                '+' => Some(TokenType::Plus),
-                ';' => Some(TokenType::Semicolon),
-                '*' => Some(TokenType::Star),
+                '(' => Some(TokenKind::LeftParen),
+                ')' => Some(TokenKind::RightParent),
+                '{' => Some(TokenKind::LeftBrace),
+                '}' => Some(TokenKind::RightBrace),
+                ',' => Some(TokenKind::Comma),
+                '.' => Some(TokenKind::Dot),
+                '-' => Some(TokenKind::Minus),
+                '+' => Some(TokenKind::Plus),
+                ';' => Some(TokenKind::Semicolon),
+                '*' => Some(TokenKind::Star),
                 '!' => {
                     match self.source.peek() {
                         Some('=') => {
                             let _ = self.source.next();
-                            Some(TokenType::BangEqual)
+                            Some(TokenKind::BangEqual)
                         },
-                        _ => Some(TokenType::Bang),
+                        _ => Some(TokenKind::Bang),
                     }
                 },
                 '=' => {
                     match self.source.peek() {
                         Some('=') => {
                             let _ = self.source.next();
-                            Some(TokenType::EqualEqual)
+                            Some(TokenKind::EqualEqual)
                         },
-                        _ => Some(TokenType::Equal),
+                        _ => Some(TokenKind::Equal),
                     }
                 },
                 '<' => {
                     match self.source.peek() {
                         Some('=') => {
                             let _ = self.source.next();
-                            Some(TokenType::LessEqual)
+                            Some(TokenKind::LessEqual)
                         },
-                        _ => Some(TokenType::Less),
+                        _ => Some(TokenKind::Less),
                     }
                 },
                 '>' => {
                     match self.source.peek() {
                         Some('=') => {
                             let _ = self.source.next();
-                            Some(TokenType::GreaterEqual)
+                            Some(TokenKind::GreaterEqual)
                         },
-                        _ => Some(TokenType::Greater),
+                        _ => Some(TokenKind::Greater),
                     }
                 },
                 '/' => {
@@ -139,7 +139,7 @@ impl Scanner{
                             }
                             None
                         },
-                        _ => Some(TokenType::Slash)
+                        _ => Some(TokenKind::Slash)
                     }
                 },
                 ' ' | '\r' | '\t' => {
@@ -171,7 +171,7 @@ impl Scanner{
 
     }
 
-    fn scan_string(&mut self) -> Option<TokenType> {
+    fn scan_string(&mut self) -> Option<TokenKind> {
 
         loop {
             match self.source.next() {
@@ -183,7 +183,7 @@ impl Scanner{
                 Some('"') => {
                     let slice = self.source.slice().expect("Slice returned isn't valid");
                     let slice = &slice[1..slice.len() - 1];
-                    return Some(TokenType::String(slice.to_string()))
+                    return Some(TokenKind::String(slice.to_string()))
                 }
                 Some(_) => continue,
                 None => {
@@ -194,7 +194,7 @@ impl Scanner{
         }
     }
 
-    fn scan_number(&mut self) -> Option<TokenType>{
+    fn scan_number(&mut self) -> Option<TokenKind>{
         while let Some(c) = self.source.peek() {
             if c.is_ascii_digit() {
                 let _ = self.source.next();
@@ -217,10 +217,10 @@ impl Scanner{
         }
         let slice = self.source.slice().expect("Got invalid slice at scanning number");
         let num = f64::from_str(slice).expect("Couldnt parse invalid number");
-        Some(TokenType::Number(num))
+        Some(TokenKind::Number(num))
     }
 
-    fn scan_ident(&mut self) -> Option<TokenType> {
+    fn scan_ident(&mut self) -> Option<TokenKind> {
         while let Some(c) = self.source.peek() {
             if c.is_alphanumeric() {
                 let _ = self.source.next();
@@ -229,7 +229,7 @@ impl Scanner{
             }
         }
         let slice = self.source.slice().expect("Couldn't get identifier slice");
-        let token = TokenType::from_ident(slice.to_string());
+        let token = TokenKind::from_ident(slice.to_string());
         Some(token)
     }
 
@@ -238,7 +238,7 @@ impl Scanner{
         eprintln!("Error: {}",messg);
     }
 
-    fn add_token(&mut self, token_type: TokenType) {
+    fn add_token(&mut self, token_type: TokenKind) {
         let token = Token::new(token_type);
         self.tokens.push(token);
     }

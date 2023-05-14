@@ -1,33 +1,38 @@
 use std::fmt::{self,Display};
 
+#[derive(Clone)]
 pub struct Token {
-    token_type: TokenType,
+    kind: TokenKind,
     lexeme: Option<String>,
     literal: Option<String>,
     line: i32,
 }
 
 impl Token {
-    pub fn new(token_type: TokenType) -> Token {
+    pub fn new(kind: TokenKind) -> Token {
         Token {
-            token_type,
+            kind,
             lexeme: None,
             literal: None,
             line: 0,
         }
     }
 
-
+    pub fn kind(&self) -> &TokenKind {
+        &self.kind
+    }
 }
 
 impl Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         //TODO: , self.lexeme, self.literal
-        write!(f, "{}", self.token_type)
+        write!(f, "{}", self.kind)
     }
 }
 
-pub enum TokenType {
+
+#[derive(PartialEq, Clone)]
+pub enum TokenKind {
     //One char
     LeftParen,
     RightParent,
@@ -73,72 +78,72 @@ pub enum TokenType {
     Eof,
 }
 
-impl Display for TokenType {
+impl Display for TokenKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TokenType::LeftParen => write!(f,"LEFT_PAREN"),
-            TokenType::RightParent => write!(f,"RIGHT_PAREN"),
-            TokenType::LeftBrace => write!(f,"LEFT_BRACE"),
-            TokenType::RightBrace => write!(f,"RIGHT_BRACE"), 
-            TokenType::Comma => write!(f,"COMMA"),
-            TokenType::Dot => write!(f,"DOT"),
-            TokenType::Minus => write!(f,"MINUS"),
-            TokenType::Plus => write!(f,"PLUS"),
-            TokenType::Semicolon => write!(f,"SEMICOLON"),
-            TokenType::Slash => write!(f,"SLASH"),
-            TokenType::Star => write!(f,"STAR"),
-            TokenType::Bang => write!(f,"BANG"),
-            TokenType::BangEqual => write!(f,"BANG_EQUAL"),
-            TokenType::Equal => write!(f,"EQUAL"),
-            TokenType::EqualEqual => write!(f,"EQUAL_EQUAL"),
-            TokenType::Greater => write!(f,"GREATER"),
-            TokenType::GreaterEqual => write!(f,"GREATER_EQUAL"),
-            TokenType::Less => write!(f,"LESS"),
-            TokenType::LessEqual => write!(f,"LESS_EQUAL"),
-            TokenType::Identifier(s) => write!(f,"IDENTIFIER ({})", s),
-            TokenType::String(s) => write!(f,"STRING ({})",s),
-            TokenType::Number(n) => write!(f,"NUMBER ({})",n),
-            TokenType::And => write!(f,"AND"),
-            TokenType::Class => write!(f,"CLASS"),
-            TokenType::Else => write!(f,"ELSE"),
-            TokenType::False => write!(f,"FALSE"),
-            TokenType::Fun => write!(f,"FUN"),
-            TokenType::For => write!(f,"FOR"),
-            TokenType::If => write!(f,"IF"),
-            TokenType::Nil => write!(f,"NIL"),
-            TokenType::Or => write!(f,"OR"),
-            TokenType::Print => write!(f,"PRINT"),
-            TokenType::Return => write!(f,"RETURN"),
-            TokenType::Super => write!(f,"SUPER"),
-            TokenType::This => write!(f,"THIS"),
-            TokenType::True => write!(f,"TRUE"),
-            TokenType::Var => write!(f,"VAR"),
-            TokenType::While => write!(f,"WHILE"),
-            TokenType::Eof => write!(f,"EOF"),
+            Self::LeftParen => write!(f,"LEFT_PAREN"),
+            Self::RightParent => write!(f,"RIGHT_PAREN"),
+            Self::LeftBrace => write!(f,"LEFT_BRACE"),
+            Self::RightBrace => write!(f,"RIGHT_BRACE"), 
+            Self::Comma => write!(f,"COMMA"),
+            Self::Dot => write!(f,"DOT"),
+            Self::Minus => write!(f,"MINUS"),
+            Self::Plus => write!(f,"PLUS"),
+            Self::Semicolon => write!(f,"SEMICOLON"),
+            Self::Slash => write!(f,"SLASH"),
+            Self::Star => write!(f,"STAR"),
+            Self::Bang => write!(f,"BANG"),
+            Self::BangEqual => write!(f,"BANG_EQUAL"),
+            Self::Equal => write!(f,"EQUAL"),
+            Self::EqualEqual => write!(f,"EQUAL_EQUAL"),
+            Self::Greater => write!(f,"GREATER"),
+            Self::GreaterEqual => write!(f,"GREATER_EQUAL"),
+            Self::Less => write!(f,"LESS"),
+            Self::LessEqual => write!(f,"LESS_EQUAL"),
+            Self::Identifier(s) => write!(f,"IDENTIFIER ({})", s),
+            Self::String(s) => write!(f,"STRING ({})",s),
+            Self::Number(n) => write!(f,"NUMBER ({})",n),
+            Self::And => write!(f,"AND"),
+            Self::Class => write!(f,"CLASS"),
+            Self::Else => write!(f,"ELSE"),
+            Self::False => write!(f,"FALSE"),
+            Self::Fun => write!(f,"FUN"),
+            Self::For => write!(f,"FOR"),
+            Self::If => write!(f,"IF"),
+            Self::Nil => write!(f,"NIL"),
+            Self::Or => write!(f,"OR"),
+            Self::Print => write!(f,"PRINT"),
+            Self::Return => write!(f,"RETURN"),
+            Self::Super => write!(f,"SUPER"),
+            Self::This => write!(f,"THIS"),
+            Self::True => write!(f,"TRUE"),
+            Self::Var => write!(f,"VAR"),
+            Self::While => write!(f,"WHILE"),
+            Self::Eof => write!(f,"EOF"),
         }
     }
 }
 
-impl TokenType {
-    pub fn from_ident(ident: String) -> TokenType {
+impl TokenKind {
+    pub fn from_ident(ident: String) -> TokenKind {
         match ident.as_ref() {
-            "and" => TokenType::And,
-            "class" => TokenType::Class,
-            "else" => TokenType::Else,
-            "false" => TokenType::False,
-            "for" => TokenType::For,
-            "fun" => TokenType::Fun,
-            "if" => TokenType::If,
-            "nil" => TokenType::Nil,
-            "or" => TokenType::Or,
-            "print" => TokenType::Print,
-            "return" => TokenType::Return,
-            "super" => TokenType::Super,
-            "this" => TokenType::This,
-            "true" => TokenType::True,
-            "var" => TokenType::Var,
-            "while" => TokenType::While,
-            ident => TokenType::Identifier(ident.to_string()),
+            "and" => Self::And,
+            "class" => Self::Class,
+            "else" => Self::Else,
+            "false" => Self::False,
+            "for" => Self::For,
+            "fun" => Self::Fun,
+            "if" => Self::If,
+            "nil" => Self::Nil,
+            "or" => Self::Or,
+            "print" => Self::Print,
+            "return" => Self::Return,
+            "super" => Self::Super,
+            "this" => Self::This,
+            "true" => Self::True,
+            "var" => Self::Var,
+            "while" => Self::While,
+            ident => Self::Identifier(ident.to_string()),
         }
     }
 }

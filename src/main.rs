@@ -44,10 +44,14 @@ fn run_prompt() -> io::Result<()> {
 
 
 use rlux::scanner::Scanner;
+use rlux::parser::Parser;
+
 fn run(source: String) {
     let mut scanner = Scanner::new(source);
-
-    for token in scanner.tokens() {
-        println!("{token}");
-    }
+    let mut parser = Parser::new(scanner.tokens().to_vec());
+    let tree = parser.build_tree();
+    println!("{tree}");
+    // for token in scanner.tokens() {
+    //     println!("{token}");
+    // }
 }

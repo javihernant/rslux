@@ -73,7 +73,7 @@ impl Scanner{
             self.scan_token();
         }
         // let end_token = Token::new(TokenKind::EOF, None, None, line);
-        // self.tokens.push(end_token);
+        self.add_token(TokenKind::Eof);
     }
 
     pub fn tokens(&mut self) -> &[Token] {
@@ -239,7 +239,7 @@ impl Scanner{
     }
 
     fn add_token(&mut self, token_type: TokenKind) {
-        let token = Token::new(token_type);
+        let token = Token::new(token_type, self.source.line);
         self.tokens.push(token);
     }
 }

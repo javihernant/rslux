@@ -17,7 +17,13 @@ impl Parser {
     }
 
     pub fn build_tree(&mut self) -> Expr {
-        *self.expr().unwrap()
+        match self.expr() {
+            Ok(expr) => *expr,
+            Err(e) => {
+                eprintln!("Error: {e}");
+                panic!();
+            }
+        }
     }
 
     fn expr(&mut self) -> Result<Box<Expr>, ExprErr> {
@@ -84,16 +90,27 @@ impl Parser {
                 let _ = self.next();
                 Ok(Box::new(Expr::Literal(tk)))
             },
+            /* TODO
+                static void error(Token token, String message) {
+                    if (token.type == TokenType.EOF) {
+                    report(token.line, " at end", message);
+                    } else {
+                    report(token.line, " at '" + token.lexeme + "'", message);
+                    }
+                }
+                Maybe create ExprErr(Token, "Message here") and Impl Display    
+             */
             TokenKind::LeftParen => { 
                 let _ = self.next();
                 let expr = self.expr()?;
                 if let Some(tk) = self.peek() {
                     if tk.kind() != &TokenKind::RightParent {
-                        return Err(ExprErr("Expected a ')' token"))
+                        //TODO: Expected ')' Got: '?'
+                        return Err(ExprErr::new(tk,"Expected a ')' token"))
                     }
                     let _ = self.next();
                 } else {
-                    return Err(ExprErr("Expected a ')' token"))
+                    panic!("No EOL token was found");
                 }
                 
                 Ok(Box::new(Expr::Grouping(expr)))

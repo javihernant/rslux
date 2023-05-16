@@ -1,9 +1,34 @@
 use std::fmt::Display;
 
-use crate::token::{Token};
+use crate::token::{Token, TokenKind};
 
 #[derive(Debug)]
-pub struct ExprErr(pub &'static str);
+pub struct ExprErr{
+    token_kind: TokenKind,
+    messg: String,
+    line: usize,
+    lexeme: String
+}
+
+impl ExprErr {
+    pub fn new(tk: &Token, messg:&str) -> ExprErr {
+        ExprErr {
+            token_kind: tk.kind().clone(),
+            messg: messg.to_string(),
+            line: tk.line(),
+            lexeme: tk.lexeme().to_string(),
+        }
+    }
+}
+
+impl Display for ExprErr{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.token_kind {
+            TokenKind::Eof => {write!(f, "[line {}] at end: {}", self.line, self.messg)},
+            _ => {write!(f, "[line {}] at '{}': {}", self.line, self.lexeme, self.messg)}
+        }
+    }
+}
 pub enum Expr {
     Binary {
         left: Box<Expr>,
@@ -40,11 +65,11 @@ mod tests {
         TokenKind::Number(45.67);
         Expr::Binary {
             left: Box::new(Expr::Grouping(Box::new(Expr::Unary{
-                op: Token::new(TokenKind::Minus),
-                right: Box::new(Expr::Literal(Token::new(TokenKind::Number(123.))))
+                op: Token::new(TokenKind::Minus, 42),
+                right: Box::new(Expr::Literal(Token::new(TokenKind::Number(123.), 42)))
             }))),
-            op: Token::new(TokenKind::Star),
-            right: Box::new(Expr::Grouping(Box::new(Expr::Literal(Token::new(TokenKind::Number(45.67))))))
+            op: Token::new(TokenKind::Star, 42),
+            right: Box::new(Expr::Grouping(Box::new(Expr::Literal(Token::new(TokenKind::Number(45.67), 42)))))
         }
     }
 

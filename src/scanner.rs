@@ -1,4 +1,4 @@
-use crate::token::{Token, TokenKind};
+use crate::{token::{Token, TokenKind}, value::Value};
 use std::str::FromStr;
 
 pub struct Scanner {
@@ -72,8 +72,7 @@ impl Scanner{
             self.source.update_start();
             self.scan_token();
         }
-        // let end_token = Token::new(TokenKind::EOF, None, None, line);
-        self.add_token(TokenKind::Eof);
+        self.tokens.push(self.produce_token(TokenKind::Eof));
     }
 
     pub fn tokens(&mut self) -> &[Token] {
@@ -82,51 +81,51 @@ impl Scanner{
 
     fn scan_token(&mut self) {
         if let Some(ch) = self.source.next() {
-            let token_type = match ch {
-                '(' => Some(TokenKind::LeftParen),
-                ')' => Some(TokenKind::RightParent),
-                '{' => Some(TokenKind::LeftBrace),
-                '}' => Some(TokenKind::RightBrace),
-                ',' => Some(TokenKind::Comma),
-                '.' => Some(TokenKind::Dot),
-                '-' => Some(TokenKind::Minus),
-                '+' => Some(TokenKind::Plus),
-                ';' => Some(TokenKind::Semicolon),
-                '*' => Some(TokenKind::Star),
+            let token = match ch {
+                '(' => Some(self.produce_token(TokenKind::LeftParen)),
+                ')' => Some(self.produce_token(TokenKind::RightParent)),
+                '{' => Some(self.produce_token(TokenKind::LeftBrace)),
+                '}' => Some(self.produce_token(TokenKind::RightBrace)),
+                ',' => Some(self.produce_token(TokenKind::Comma)),
+                '.' => Some(self.produce_token(TokenKind::Dot)),
+                '-' => Some(self.produce_token(TokenKind::Minus)),
+                '+' => Some(self.produce_token(TokenKind::Plus)),
+                ';' => Some(self.produce_token(TokenKind::Semicolon)),
+                '*' => Some(self.produce_token(TokenKind::Star)),
                 '!' => {
                     match self.source.peek() {
                         Some('=') => {
                             let _ = self.source.next();
-                            Some(TokenKind::BangEqual)
+                            Some(self.produce_token(TokenKind::BangEqual))
                         },
-                        _ => Some(TokenKind::Bang),
+                        _ => Some(self.produce_token(TokenKind::Bang)),
                     }
                 },
                 '=' => {
                     match self.source.peek() {
                         Some('=') => {
                             let _ = self.source.next();
-                            Some(TokenKind::EqualEqual)
+                            Some(self.produce_token(TokenKind::EqualEqual))
                         },
-                        _ => Some(TokenKind::Equal),
+                        _ => Some(self.produce_token(TokenKind::Equal)),
                     }
                 },
                 '<' => {
                     match self.source.peek() {
                         Some('=') => {
                             let _ = self.source.next();
-                            Some(TokenKind::LessEqual)
+                            Some(self.produce_token(TokenKind::LessEqual))
                         },
-                        _ => Some(TokenKind::Less),
+                        _ => Some(self.produce_token(TokenKind::Less)),
                     }
                 },
                 '>' => {
                     match self.source.peek() {
                         Some('=') => {
                             let _ = self.source.next();
-                            Some(TokenKind::GreaterEqual)
+                            Some(self.produce_token(TokenKind::GreaterEqual))
                         },
-                        _ => Some(TokenKind::Greater),
+                        _ => Some(self.produce_token(TokenKind::Greater)),
                     }
                 },
                 '/' => {
@@ -139,7 +138,7 @@ impl Scanner{
                             }
                             None
                         },
-                        _ => Some(TokenKind::Slash)
+                        _ => Some(self.produce_token(TokenKind::Slash))
                     }
                 },
                 ' ' | '\r' | '\t' => {
@@ -164,14 +163,20 @@ impl Scanner{
                 }
             };
 
-            if let Some(token_type) = token_type {
-                self.add_token(token_type);
+            if let Some(mut token) = token {
+                let lexeme = self.source.slice().expect("Couldn't get identifier slice").to_string();
+                token.lexeme = Some(lexeme);
+                self.tokens.push(token);
             }
         }
 
     }
 
-    fn scan_string(&mut self) -> Option<TokenKind> {
+    fn produce_token(&self, tkind: TokenKind) -> Token {
+        Token::new(tkind, None, self.source.line)
+    }
+
+    fn scan_string(&mut self) -> Option<Token> {
 
         loop {
             match self.source.next() {
@@ -183,7 +188,9 @@ impl Scanner{
                 Some('"') => {
                     let slice = self.source.slice().expect("Slice returned isn't valid");
                     let slice = &slice[1..slice.len() - 1];
-                    return Some(TokenKind::String(slice.to_string()))
+                    let literal = Some(Value::String(slice.to_string()));
+                    let token = Token::new(TokenKind::String, literal, self.source.line);
+                    return Some(token)
                 }
                 Some(_) => continue,
                 None => {
@@ -194,7 +201,7 @@ impl Scanner{
         }
     }
 
-    fn scan_number(&mut self) -> Option<TokenKind>{
+    fn scan_number(&mut self) -> Option<Token>{
         while let Some(c) = self.source.peek() {
             if c.is_ascii_digit() {
                 let _ = self.source.next();
@@ -217,10 +224,11 @@ impl Scanner{
         }
         let slice = self.source.slice().expect("Got invalid slice at scanning number");
         let num = f64::from_str(slice).expect("Couldnt parse invalid number");
-        Some(TokenKind::Number(num))
+        let token = Token::new(TokenKind::Number, Some(Value::Number(num)),self.source.line);
+        Some(token)
     }
 
-    fn scan_ident(&mut self) -> Option<TokenKind> {
+    fn scan_ident(&mut self) -> Option<Token> {
         while let Some(c) = self.source.peek() {
             if c.is_alphanumeric() {
                 let _ = self.source.next();
@@ -229,18 +237,13 @@ impl Scanner{
             }
         }
         let slice = self.source.slice().expect("Couldn't get identifier slice");
-        let token = TokenKind::from_ident(slice.to_string());
-        Some(token)
+        let tkind = TokenKind::from_ident(slice);
+        Some(self.produce_token(tkind))
     }
 
     fn error(&mut self, messg: &str) {
         self.had_error = true;
         eprintln!("Error: {}",messg);
-    }
-
-    fn add_token(&mut self, token_type: TokenKind) {
-        let token = Token::new(token_type, self.source.line);
-        self.tokens.push(token);
     }
 }
 

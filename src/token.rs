@@ -1,20 +1,21 @@
 use std::fmt::{self,Display};
 
+use crate::value::Value;
+
 #[derive(Clone)]
 pub struct Token {
     kind: TokenKind,
-    literal: Option<String>,
-    lexeme: String,
+    pub lexeme: Option<String>,
+    literal: Option<Value>,
     line: usize,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, line: usize) -> Token {
-        let lexeme = kind.lexeme();
+    pub fn new(kind: TokenKind, literal:Option<Value>, line: usize) -> Token {
         Token {
             kind,
-            literal: None,
-            lexeme,
+            lexeme: None,
+            literal,
             line,
         }
     }
@@ -23,19 +24,27 @@ impl Token {
         &self.kind
     }
 
-    pub fn lexeme(&self) -> &str {
-        &self.lexeme
+    pub fn literal(&self) -> Option<&Value> {
+        self.literal.as_ref()
     }
 
     pub fn line(&self) -> usize {
         self.line
+    }
+
+    pub fn lexeme(&self) -> Option<&String> {
+        self.lexeme.as_ref()
     }
 }
 
 impl Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         //TODO: , self.lexeme, self.literal
-        write!(f, "{}", self.kind)
+        if let Some(lit) = &self.literal {
+            write!(f,"{}[{}]", self.kind(),lit)
+        } else {
+            write!(f,"{}",self.kind())
+        }
     }
 }
 
@@ -65,8 +74,8 @@ pub enum TokenKind {
     LessEqual,
     //Literals
     Identifier(String),
-    String(String),
-    Number(f64),
+    String,
+    Number,
     //Keywords
     And,
     Class,
@@ -110,8 +119,8 @@ impl Display for TokenKind {
             Self::Less => write!(f,"LESS"),
             Self::LessEqual => write!(f,"LESS_EQUAL"),
             Self::Identifier(s) => write!(f,"IDENTIFIER ({})", s),
-            Self::String(s) => write!(f,"STRING ({})",s),
-            Self::Number(n) => write!(f,"NUMBER ({})",n),
+            Self::String => write!(f,"STRING"),
+            Self::Number => write!(f,"NUMBER"),
             Self::And => write!(f,"AND"),
             Self::Class => write!(f,"CLASS"),
             Self::Else => write!(f,"ELSE"),
@@ -134,8 +143,8 @@ impl Display for TokenKind {
 }
 
 impl TokenKind {
-    pub fn from_ident(ident: String) -> TokenKind {
-        match ident.as_ref() {
+    pub fn from_ident(ident: &str) -> TokenKind {
+        match ident {
             "and" => Self::And,
             "class" => Self::Class,
             "else" => Self::Else,
@@ -156,48 +165,48 @@ impl TokenKind {
         }
     }
 
-    fn lexeme(&self) -> String {
-        match self {
-            Self::LeftParen => "(".to_string(),
-            Self::RightParent => ")".to_string(),
-            Self::LeftBrace => "[".to_string(),
-            Self::RightBrace => "]".to_string(), 
-            Self::Comma => ",".to_string(),
-            Self::Dot => ".".to_string(),
-            Self::Minus => "-".to_string(),
-            Self::Plus => "+".to_string(),
-            Self::Semicolon => ";".to_string(),
-            Self::Slash => "/".to_string(),
-            Self::Star => "*".to_string(),
-            Self::Bang => "!".to_string(),
-            Self::BangEqual => "!=".to_string(),
-            Self::Equal => "=".to_string(),
-            Self::EqualEqual => "==".to_string(),
-            Self::Greater => ">".to_string(),
-            Self::GreaterEqual => ">=".to_string(),
-            Self::Less => "<".to_string(),
-            Self::LessEqual => "<=".to_string(),
-            Self::Identifier(s) => s.to_string(),
-            Self::String(s) => s.to_string(),
-            Self::Number(n) => n.to_string(),
-            Self::And => "&&".to_string(),
-            Self::Class => "class".to_string(),
-            Self::Else => "else".to_string(),
-            Self::False => "false".to_string(),
-            Self::Fun => "fun".to_string(),
-            Self::For => "for".to_string(),
-            Self::If => "if".to_string(),
-            Self::Nil => "nil".to_string(),
-            Self::Or => "or".to_string(),
-            Self::Print => "print".to_string(),
-            Self::Return => "return".to_string(),
-            Self::Super => "super".to_string(),
-            Self::This => "this".to_string(),
-            Self::True => "true".to_string(),
-            Self::Var => "var".to_string(),
-            Self::While => "while".to_string(),
-            Self::Eof => "".to_string(),
-        }
-    }
+    // fn lexeme(&self) -> String {
+    //     match self {
+    //         Self::LeftParen => "(".to_string(),
+    //         Self::RightParent => ")".to_string(),
+    //         Self::LeftBrace => "[".to_string(),
+    //         Self::RightBrace => "]".to_string(), 
+    //         Self::Comma => ",".to_string(),
+    //         Self::Dot => ".".to_string(),
+    //         Self::Minus => "-".to_string(),
+    //         Self::Plus => "+".to_string(),
+    //         Self::Semicolon => ";".to_string(),
+    //         Self::Slash => "/".to_string(),
+    //         Self::Star => "*".to_string(),
+    //         Self::Bang => "!".to_string(),
+    //         Self::BangEqual => "!=".to_string(),
+    //         Self::Equal => "=".to_string(),
+    //         Self::EqualEqual => "==".to_string(),
+    //         Self::Greater => ">".to_string(),
+    //         Self::GreaterEqual => ">=".to_string(),
+    //         Self::Less => "<".to_string(),
+    //         Self::LessEqual => "<=".to_string(),
+    //         Self::Identifier(s) => s.to_string(),
+    //         Self::String => s.to_string(),
+    //         Self::Number => n.to_string(),
+    //         Self::And => "&&".to_string(),
+    //         Self::Class => "class".to_string(),
+    //         Self::Else => "else".to_string(),
+    //         Self::False => "false".to_string(),
+    //         Self::Fun => "fun".to_string(),
+    //         Self::For => "for".to_string(),
+    //         Self::If => "if".to_string(),
+    //         Self::Nil => "nil".to_string(),
+    //         Self::Or => "or".to_string(),
+    //         Self::Print => "print".to_string(),
+    //         Self::Return => "return".to_string(),
+    //         Self::Super => "super".to_string(),
+    //         Self::This => "this".to_string(),
+    //         Self::True => "true".to_string(),
+    //         Self::Var => "var".to_string(),
+    //         Self::While => "while".to_string(),
+    //         Self::Eof => "".to_string(),
+    //     }
+    // }
 }
 

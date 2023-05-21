@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::token::{Token, TokenKind};
+use crate::{token::{Token, TokenKind}, value::Value};
 
 #[derive(Debug)]
 pub struct ExprErr{
@@ -16,7 +16,7 @@ impl ExprErr {
             token_kind: tk.kind().clone(),
             messg: messg.to_string(),
             line: tk.line(),
-            lexeme: tk.lexeme().to_string(),
+            lexeme: tk.lexeme().expect("couldnt get lexeme").to_string(),
         }
     }
 }
@@ -36,7 +36,7 @@ pub enum Expr {
         right: Box<Expr>,
     },
     Grouping (Box<Expr>),
-    Literal (Token),
+    Literal (Value),
     Unary {
         op: Token,
         right: Box<Expr>,
@@ -46,10 +46,10 @@ pub enum Expr {
 impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Expr::Binary { left, op, right } => { write!(f,"[ {op} {left} {right} ]")?;},
-            Expr::Grouping(e) => { write!(f, "[ Grouping {e} ]")?},
+            Expr::Binary { left, op, right } => { write!(f,"( {op} {left} {right} )")?;},
+            Expr::Grouping(e) => { write!(f, "( Grouping {e} )")?},
             Expr::Literal(l) => { write!(f, "{l}")?},
-            Expr::Unary { op, right } => { write!(f, "[ {op} {right} ]")? },
+            Expr::Unary { op, right } => { write!(f, "( {op} {right} )")? },
         }
         Ok(())
 
@@ -61,21 +61,21 @@ mod tests {
     use crate::token::{Token, TokenKind};
     use super::*;
 
-    fn gen_expr() -> Expr {
-        TokenKind::Number(45.67);
-        Expr::Binary {
-            left: Box::new(Expr::Grouping(Box::new(Expr::Unary{
-                op: Token::new(TokenKind::Minus, 42),
-                right: Box::new(Expr::Literal(Token::new(TokenKind::Number(123.), 42)))
-            }))),
-            op: Token::new(TokenKind::Star, 42),
-            right: Box::new(Expr::Grouping(Box::new(Expr::Literal(Token::new(TokenKind::Number(45.67), 42)))))
-        }
-    }
+    // fn gen_expr() -> Expr {
+    //     TokenKind::Number(45.67);
+    //     Expr::Binary {
+    //         left: Box::new(Expr::Grouping(Box::new(Expr::Unary{
+    //             op: Token::new(TokenKind::Minus, 42),
+    //             right: Box::new(Expr::Literal(Token::new(TokenKind::Number(123.), 42)))
+    //         }))),
+    //         op: Token::new(TokenKind::Star, 42),
+    //         right: Box::new(Expr::Grouping(Box::new(Expr::Literal(Token::new(TokenKind::Number(45.67), 42)))))
+    //     }
+    // }
 
-    #[test]
-    fn test_display_expr() {
-        let expr = gen_expr();
-        println!("{}", expr)
-    }
+    // #[test]
+    // fn test_display_expr() {
+    //     let expr = gen_expr();
+    //     println!("{}", expr)
+    // }
 }

@@ -1,6 +1,4 @@
-mod expr;
-
-use expr::{Expr, ExprErr};
+use crate::expr::{Expr, ExprErr};
 use crate::token::{Token, TokenKind};
 
 pub struct Parser {
@@ -86,20 +84,10 @@ impl Parser {
     fn primary(&mut self) -> Result<Box<Expr>, ExprErr> {
         let tk = self.peek().expect("no more tokens").clone();
         match tk.kind() {
-            TokenKind::False | TokenKind::True | TokenKind::Nil | TokenKind::Number(_) | TokenKind::String(_) => {
+            TokenKind::False | TokenKind::True | TokenKind::Nil | TokenKind::Number | TokenKind::String => {
                 let _ = self.next();
-                Ok(Box::new(Expr::Literal(tk)))
+                Ok(Box::new(Expr::Literal(tk.literal().unwrap().clone())))
             },
-            /* TODO
-                static void error(Token token, String message) {
-                    if (token.type == TokenType.EOF) {
-                    report(token.line, " at end", message);
-                    } else {
-                    report(token.line, " at '" + token.lexeme + "'", message);
-                    }
-                }
-                Maybe create ExprErr(Token, "Message here") and Impl Display    
-             */
             TokenKind::LeftParen => { 
                 let _ = self.next();
                 let expr = self.expr()?;

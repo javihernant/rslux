@@ -1,7 +1,8 @@
 pub mod scanner;
 // mod error;
+mod expr;
+mod value;
 mod token;
 pub mod parser;
-mod value;
-mod expr;
+pub mod interpreter;
 

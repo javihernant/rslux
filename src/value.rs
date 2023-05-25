@@ -1,7 +1,5 @@
 use std::fmt::Display;
 
-use crate::token::TokenKind;
-
 #[derive(PartialEq, Clone)]
 pub enum Value {
     Number (f64),

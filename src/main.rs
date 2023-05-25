@@ -45,12 +45,15 @@ fn run_prompt() -> io::Result<()> {
 
 use rlux::scanner::Scanner;
 use rlux::parser::Parser;
+use rlux::interpreter::Interpreter;
 
 fn run(source: String) {
     let mut scanner = Scanner::new(source);
     let mut parser = Parser::new(scanner.tokens().to_vec());
     let tree = parser.build_tree();
-    println!("{tree}");
+    // println!("{tree}");
+    let interp = Interpreter::new();
+    interp.interpret(tree);
     // for token in scanner.tokens() {
     //     println!("{token}");
     // }

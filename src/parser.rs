@@ -1,5 +1,6 @@
 use crate::expr::{Expr, ExprErr};
 use crate::token::{Token, TokenKind};
+use crate::value::Value;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -93,7 +94,6 @@ impl Parser {
                 let expr = self.expr()?;
                 if let Some(tk) = self.peek() {
                     if tk.kind() != &TokenKind::RightParent {
-                        //TODO: Expected ')' Got: '?'
                         return Err(ExprErr::new(tk,"Expected a ')' token"))
                     }
                     let _ = self.next();
@@ -131,5 +131,24 @@ impl Parser {
             }
         }
         false
+    }
+
+    fn sync(&mut self) {
+        while let Some(tk) = self.peek() {
+            match tk.kind() {
+                TokenKind::Semicolon => { 
+                    let _ = self.next();
+                    break;
+                },
+                TokenKind::Class | TokenKind::Fun | TokenKind::Var | TokenKind::For 
+                | TokenKind::If | TokenKind::While | TokenKind::Print | TokenKind::Return => { 
+                    break;
+                },
+                _ => {
+                    let _ = self.next();
+                    continue;
+                }
+            }
+        }
     }
 }

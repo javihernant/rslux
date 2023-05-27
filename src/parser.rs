@@ -1,6 +1,7 @@
 use crate::expr::{Expr, ExprErr};
 use crate::token::{Token, TokenKind};
 use crate::value::Value;
+use crate::expr::{Stmt, StmtErr};
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -15,13 +16,139 @@ impl Parser {
         }
     }
 
-    pub fn build_tree(&mut self) -> Expr {
-        match self.expr() {
-            Ok(expr) => *expr,
-            Err(e) => {
-                eprintln!("Error: {e}");
-                panic!();
+    // pub fn build_tree(&mut self) -> Expr {
+
+    //     match self.expr() {
+    //         Ok(expr) => *expr,
+    //         Err(e) => {
+    //             eprintln!("Error: {e}");
+    //             panic!();
+    //         }
+    //     }
+    // }
+
+    pub fn stmts(&mut self) -> Vec<Stmt> {
+        let mut stmts = Vec::new();
+        while let Some(tk) = self.peek() {
+            if tk.kind() == &TokenKind::Eof {
+                let _ = self.next();
+                break
             }
+            match self.declaration() {
+                Ok(stmt) => {
+                    stmts.push(stmt);
+                },
+                Err(e) => {
+                    eprintln!("{e}")
+                }
+            }
+        }
+        stmts
+    }
+
+    fn declaration(&mut self) -> Result<Stmt, StmtErr>{
+        let curr_tk = self.peek().expect("couldnt get token");
+        match curr_tk.kind() {
+            TokenKind::Var => {
+                let _ = self.next();
+                self.var_decl()
+            },
+            _ => { 
+                self.stmt()
+            },
+        } 
+    }
+
+    //var name (= value);
+    fn var_decl(&mut self) -> Result<Stmt, StmtErr> {
+        
+        let tk = self.peek().expect("couldnt get token");
+        let name = match tk.kind() {
+            TokenKind::Identifier(name) => {
+                let name = name.to_string();
+                let _ = self.next();
+                name
+            },
+            _ => return Err(StmtErr::InvalidStmt("expected a variable name".to_string(), tk.clone())),
+        };
+
+        // let name = {
+        //     let tk = self.peek().expect("couldnt get token").clone();
+        //     match self.peek().expect("couldnt get token").kind() {
+        //         TokenKind::Identifier(_) => {
+        //             let _ = self.next();
+        //             tk
+        //         },
+        //         _ => return Err(StmtErr::InvalidStmt("expected a variable name".to_string(), tk))
+        //     }
+        // };
+      
+
+        let initializer = match self.peek().expect("couldnt get token").kind() {
+            TokenKind::Equal => {
+                let _ = self.next();
+                let expr = *self.expr()?;
+                Some(expr)
+            },
+            _ => None
+        };
+
+        let tk = self.peek().expect("couldnt get token");
+        if let TokenKind::Semicolon = tk.kind() {
+            let _ = self.next();
+            Ok(
+                Stmt::Var { 
+                name,
+                initializer,
+            })
+        }
+        else {
+            return Err(StmtErr::InvalidStmt("Expected ';'".to_string(), tk.clone()));
+        }
+    }
+
+    fn stmt(&mut self) -> Result<Stmt, StmtErr>{
+        let curr_tk = self.peek().expect("couldnt get token");
+        match curr_tk.kind() {
+            TokenKind::Print => {
+                let _ = self.next();
+                self.print_stmt()
+            },
+            _ => { 
+                self.expr_stmt()
+            },
+        }  
+    }
+
+    fn expr_stmt(&mut self) -> Result<Stmt, StmtErr> {
+        let expr = self.expr()?;
+
+        if let Some(tk) = self.peek() {
+            if let TokenKind::Semicolon = tk.kind() {
+                let _ = self.next();
+                // println!("Expr: {expr}");
+                return Ok(Stmt::Expr(*expr));
+            } else {
+                return Err(StmtErr::InvalidStmt("Expected ';'".to_string(), tk.clone()));
+            }
+        } else {
+            panic!("No EOF was found")
+        }
+    }
+
+    fn print_stmt(&mut self) -> Result<Stmt, StmtErr> {
+        let expr = self.expr()?;
+        
+        if let Some(tk) = self.peek() {
+            if let TokenKind::Semicolon = tk.kind() {
+                let _ = self.next();
+                // println!("Print: {expr}");
+                return Ok(Stmt::Print(*expr));
+            } else {
+                return Err(StmtErr::InvalidStmt("Expected ';'".to_string(), tk.clone()));
+            }
+        } else {
+            panic!("No EOF was found")
         }
     }
 
@@ -89,6 +216,10 @@ impl Parser {
                 let _ = self.next();
                 Ok(Box::new(Expr::Literal(tk.literal().unwrap().clone())))
             },
+            TokenKind::Identifier(_) => {
+                let _ = self.next();
+                Ok(Box::new(Expr::Variable(tk)))
+            }
             TokenKind::LeftParen => { 
                 let _ = self.next();
                 let expr = self.expr()?;

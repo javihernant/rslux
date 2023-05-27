@@ -164,8 +164,6 @@ impl Scanner{
             };
 
             if let Some(mut token) = token {
-                let lexeme = self.source.slice().expect("Couldn't get identifier slice").to_string();
-                token.lexeme = Some(lexeme);
                 self.tokens.push(token);
             }
         }
@@ -173,7 +171,13 @@ impl Scanner{
     }
 
     fn produce_token(&self, tkind: TokenKind) -> Token {
-        Token::new(tkind, None, self.source.line)
+        let literal = match tkind {
+            TokenKind::True => Some(Value::Bool(true)),
+            TokenKind::False => Some(Value::Bool(false)),
+            _ => None,
+        };
+        let lexeme = self.source.slice().expect("Couldn't get lexeme").to_string();
+        Token::new(tkind, literal, lexeme, self.source.line)
     }
 
     fn scan_string(&mut self) -> Option<Token> {
@@ -189,7 +193,7 @@ impl Scanner{
                     let slice = self.source.slice().expect("Slice returned isn't valid");
                     let slice = &slice[1..slice.len() - 1];
                     let literal = Some(Value::String(slice.to_string()));
-                    let token = Token::new(TokenKind::String, literal, self.source.line);
+                    let token = Token::new(TokenKind::String, literal, slice.to_string(), self.source.line);
                     return Some(token)
                 }
                 Some(_) => continue,
@@ -224,7 +228,7 @@ impl Scanner{
         }
         let slice = self.source.slice().expect("Got invalid slice at scanning number");
         let num = f64::from_str(slice).expect("Couldnt parse invalid number");
-        let token = Token::new(TokenKind::Number, Some(Value::Number(num)),self.source.line);
+        let token = Token::new(TokenKind::Number, Some(Value::Number(num)),slice.to_string(),self.source.line);
         Some(token)
     }
 

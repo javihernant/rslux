@@ -1,3 +1,38 @@
+//TODO: Change name of the module to stmt
+
+pub enum Stmt {
+    Print(Expr),
+    Expr(Expr),
+    Var {
+        // name: Token,
+        name: String,
+        initializer: Option<Expr>,
+    }
+}
+
+pub enum StmtErr {
+    InvalidStmt(String, Token),
+    ExprErr(ExprErr)
+}
+
+impl Display for StmtErr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StmtErr::ExprErr(e) => write!(f, "ExprErr: {e}"),
+            StmtErr::InvalidStmt(msg, tk) => {
+                writeln!(f, "invalid statement: {msg}.")?;
+                write!(f, "[line {}]", tk.line())
+            }
+        }
+        
+    }
+}
+
+impl From<ExprErr> for StmtErr {
+    fn from(value: ExprErr) -> Self {
+        StmtErr::ExprErr(value)
+    }
+}
 use std::fmt::Display;
 
 use crate::{token::{Token, TokenKind}, value::Value};
@@ -16,7 +51,7 @@ impl ExprErr {
             token_kind: tk.kind().clone(),
             messg: messg.to_string(),
             line: tk.line(),
-            lexeme: tk.lexeme().expect("couldnt get lexeme").to_string(),
+            lexeme: tk.lexeme().to_string(),
         }
     }
 }
@@ -37,6 +72,7 @@ pub enum Expr {
     },
     Grouping (Box<Expr>),
     Literal (Value),
+    Variable (Token),
     Unary {
         op: Token,
         right: Box<Expr>,
@@ -46,13 +82,12 @@ pub enum Expr {
 impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Expr::Binary { left, op, right } => { write!(f,"( {op} {left} {right} )")?;},
-            Expr::Grouping(e) => { write!(f, "( Grouping {e} )")?},
-            Expr::Literal(l) => { write!(f, "{l}")?},
-            Expr::Unary { op, right } => { write!(f, "( {op} {right} )")? },
+            Expr::Binary { left, op, right } => write!(f,"( {op} {left} {right} )"),
+            Expr::Grouping(e) => write!(f, "( Grouping {e} )"),
+            Expr::Literal(l) => write!(f, "{l}"),
+            Expr::Unary { op, right } => write!(f, "( {op} {right} )"),
+            Expr::Variable(a) => write!(f,"( VAR {})", a.lexeme()),
         }
-        Ok(())
-
     }
 }
 

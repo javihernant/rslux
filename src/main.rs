@@ -50,11 +50,8 @@ use rlux::interpreter::Interpreter;
 fn run(source: String) {
     let mut scanner = Scanner::new(source);
     let mut parser = Parser::new(scanner.tokens().to_vec());
-    let tree = parser.build_tree();
+    let mut tree = parser.stmts();
     // println!("{tree}");
-    let interp = Interpreter::new();
+    let mut interp = Interpreter::new();
     interp.interpret(tree);
-    // for token in scanner.tokens() {
-    //     println!("{token}");
-    // }
 }

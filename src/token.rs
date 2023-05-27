@@ -5,16 +5,16 @@ use crate::value::Value;
 #[derive(Clone)]
 pub struct Token {
     kind: TokenKind,
-    pub lexeme: Option<String>,
+    pub lexeme: String,
     literal: Option<Value>,
     line: usize,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, literal:Option<Value>, line: usize) -> Token {
+    pub fn new(kind: TokenKind, literal:Option<Value>, lexeme: String, line: usize) -> Token {
         Token {
             kind,
-            lexeme: None,
+            lexeme,
             literal,
             line,
         }
@@ -32,7 +32,7 @@ impl Token {
         self.line
     }
 
-    pub fn lexeme(&self) -> Option<&String> {
+    pub fn lexeme(&self) -> &str {
         self.lexeme.as_ref()
     }
 }

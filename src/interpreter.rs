@@ -11,14 +11,14 @@ pub struct Interpreter {
 
 struct EvalErr {
     messg: String,
-    line: usize,
+    token: Token,
 }
 
 impl EvalErr {
     pub fn new(token: &Token, messg: &str)->EvalErr{
         EvalErr {
             messg: messg.to_string(),
-            line: token.line(),
+            token: token.clone(),
         }
     }
 }
@@ -26,7 +26,7 @@ impl EvalErr {
 impl Display for EvalErr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f,"{}",self.messg)?;
-        write!(f,"[line {}]",self.line)
+        writeln!(f,"[line {}] at '{}'",self.token.line(),self.token.lexeme())
     }
 }
 
@@ -72,7 +72,7 @@ impl Interpreter {
         }
     }
 
-    fn eval_expr(&self, expr: &Expr) -> Result<Value, EvalErr> {
+    fn eval_expr(&mut self, expr: &Expr) -> Result<Value, EvalErr> {
         match expr {
             Expr::Literal(v) => Ok(v.clone()),
             Expr::Variable(var_name) => {
@@ -159,6 +159,16 @@ impl Interpreter {
                         Ok(val.inv())
                     },
                     _ => unreachable!(),
+                }
+            },
+            Expr::Assign { name, value } => {
+                let var_name = name.lexeme();
+                if self.env_vars.contains_key(var_name) {
+                    let value = self.eval_expr(value)?;
+                    self.env_vars.insert(var_name.to_string(), value.clone());
+                    Ok(value)
+                } else {
+                    Err(EvalErr::new(name, "Undefined variable"))
                 }
             },
         }

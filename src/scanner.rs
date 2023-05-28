@@ -163,7 +163,7 @@ impl Scanner{
                 }
             };
 
-            if let Some(mut token) = token {
+            if let Some(token) = token {
                 self.tokens.push(token);
             }
         }

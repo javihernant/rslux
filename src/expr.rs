@@ -65,6 +65,10 @@ impl Display for ExprErr{
     }
 }
 pub enum Expr {
+    Assign {
+        name: Token,
+        value: Box<Expr>,
+    },
     Binary {
         left: Box<Expr>,
         op: Token,
@@ -79,17 +83,17 @@ pub enum Expr {
     }
 }
 
-impl Display for Expr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Expr::Binary { left, op, right } => write!(f,"( {op} {left} {right} )"),
-            Expr::Grouping(e) => write!(f, "( Grouping {e} )"),
-            Expr::Literal(l) => write!(f, "{l}"),
-            Expr::Unary { op, right } => write!(f, "( {op} {right} )"),
-            Expr::Variable(a) => write!(f,"( VAR {})", a.lexeme()),
-        }
-    }
-}
+// impl Display for Expr {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         match self {
+//             Expr::Binary { left, op, right } => write!(f,"( {op} {left} {right} )"),
+//             Expr::Grouping(e) => write!(f, "( Grouping {e} )"),
+//             Expr::Literal(l) => write!(f, "{l}"),
+//             Expr::Unary { op, right } => write!(f, "( {op} {right} )"),
+//             Expr::Variable(a) => write!(f,"( VAR {})", a.lexeme()),
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

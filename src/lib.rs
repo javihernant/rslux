@@ -1,5 +1,5 @@
 pub mod scanner;
-// mod error;
+mod error;
 mod expr;
 mod value;
 mod token;

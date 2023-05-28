@@ -1,7 +1,6 @@
-use crate::expr::{Expr, ExprErr};
+use crate::error::compiletime::ParseError;
+use crate::expr::{Expr, Stmt};
 use crate::token::{Token, TokenKind};
-use crate::value::Value;
-use crate::expr::{Stmt, StmtErr};
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -46,7 +45,7 @@ impl Parser {
         stmts
     }
 
-    fn declaration(&mut self) -> Result<Stmt, StmtErr>{
+    fn declaration(&mut self) -> Result<Stmt, ParseError>{
         let curr_tk = self.peek().expect("couldnt get token");
         match curr_tk.kind() {
             TokenKind::Var => {
@@ -60,7 +59,7 @@ impl Parser {
     }
 
     //var name (= value);
-    fn var_decl(&mut self) -> Result<Stmt, StmtErr> {
+    fn var_decl(&mut self) -> Result<Stmt, ParseError> {
         
         let tk = self.peek().expect("couldnt get token");
         let name = match tk.kind() {
@@ -69,7 +68,7 @@ impl Parser {
                 let _ = self.next();
                 name
             },
-            _ => return Err(StmtErr::InvalidStmt("expected a variable name".to_string(), tk.clone())),
+            _ => return Err(ParseError::new("expected a variable name", tk)),
         };
 
         // let name = {
@@ -103,11 +102,11 @@ impl Parser {
             })
         }
         else {
-            return Err(StmtErr::InvalidStmt("Expected ';'".to_string(), tk.clone()));
+            return Err(ParseError::new("Expected ';'", tk));
         }
     }
 
-    fn stmt(&mut self) -> Result<Stmt, StmtErr>{
+    fn stmt(&mut self) -> Result<Stmt, ParseError>{
         let curr_tk = self.peek().expect("couldnt get token");
         match curr_tk.kind() {
             TokenKind::Print => {
@@ -120,7 +119,7 @@ impl Parser {
         }  
     }
 
-    fn expr_stmt(&mut self) -> Result<Stmt, StmtErr> {
+    fn expr_stmt(&mut self) -> Result<Stmt, ParseError> {
         let expr = self.expr()?;
 
         if let Some(tk) = self.peek() {
@@ -129,14 +128,14 @@ impl Parser {
                 // println!("Expr: {expr}");
                 return Ok(Stmt::Expr(*expr));
             } else {
-                return Err(StmtErr::InvalidStmt("Expected ';'".to_string(), tk.clone()));
+                return Err(ParseError::new("Expected ';'", tk));
             }
         } else {
             panic!("No EOF was found")
         }
     }
 
-    fn print_stmt(&mut self) -> Result<Stmt, StmtErr> {
+    fn print_stmt(&mut self) -> Result<Stmt, ParseError> {
         let expr = self.expr()?;
         
         if let Some(tk) = self.peek() {
@@ -145,18 +144,18 @@ impl Parser {
                 // println!("Print: {expr}");
                 return Ok(Stmt::Print(*expr));
             } else {
-                return Err(StmtErr::InvalidStmt("Expected ';'".to_string(), tk.clone()));
+                return Err(ParseError::new("Expected ';'", tk));
             }
         } else {
             panic!("No EOF was found")
         }
     }
 
-    fn expr(&mut self) -> Result<Box<Expr>, ExprErr> {
+    fn expr(&mut self) -> Result<Box<Expr>, ParseError> {
         Ok(self.assignment()?)
     }
 
-    fn assignment(&mut self) -> Result<Box<Expr>, ExprErr> {
+    fn assignment(&mut self) -> Result<Box<Expr>, ParseError> {
         let expr = self.equality()?;
         if self.match_token(&[TokenKind::Equal]) {
             let equals = self.next().expect("Couldnt get token");
@@ -164,13 +163,13 @@ impl Parser {
                 let value = self.assignment()?;
                 return Ok(Box::new(Expr::Assign { name, value }))
             } else {
-                return Err(ExprErr::new(equals, "Invalid assignment target"))
+                return Err(ParseError::new("Invalid assignment target", equals))
             }
         }
         Ok(expr)
     }
 
-    fn equality(&mut self) -> Result<Box<Expr>, ExprErr> {
+    fn equality(&mut self) -> Result<Box<Expr>, ParseError> {
         let mut expr = self.comparison()?;
         while self.match_token(&[TokenKind::BangEqual, TokenKind::EqualEqual]) {
             let op = self.next().unwrap().clone();
@@ -180,7 +179,7 @@ impl Parser {
         Ok(expr)
     }
 
-    fn comparison(&mut self) -> Result<Box<Expr>, ExprErr> {
+    fn comparison(&mut self) -> Result<Box<Expr>, ParseError> {
         let mut expr = self.term()?;
 
         while self.match_token(&[TokenKind::Greater, TokenKind::GreaterEqual, TokenKind::Less, TokenKind::LessEqual]) {
@@ -191,7 +190,7 @@ impl Parser {
         Ok(expr)
     }
 
-    fn term(&mut self) -> Result<Box<Expr>, ExprErr> {
+    fn term(&mut self) -> Result<Box<Expr>, ParseError> {
         let mut expr = self.factor()?;
 
         while self.match_token(&[TokenKind::Minus, TokenKind::Plus]) {
@@ -202,7 +201,7 @@ impl Parser {
         Ok(expr)
     }
 
-    fn factor(&mut self) -> Result<Box<Expr>, ExprErr> {
+    fn factor(&mut self) -> Result<Box<Expr>, ParseError> {
         let mut expr = self.unary()?;
 
         while self.match_token(&[TokenKind::Slash, TokenKind::Star]) {
@@ -213,7 +212,7 @@ impl Parser {
         Ok(expr)
     }
 
-    fn unary(&mut self) -> Result<Box<Expr>, ExprErr> {
+    fn unary(&mut self) -> Result<Box<Expr>, ParseError> {
         if self.match_token(&[TokenKind::Minus, TokenKind::Bang]) {
             let op = self.next().unwrap().clone();
             let right = self.unary()?;
@@ -223,7 +222,7 @@ impl Parser {
         Ok(self.primary()?)
     }
 
-    fn primary(&mut self) -> Result<Box<Expr>, ExprErr> {
+    fn primary(&mut self) -> Result<Box<Expr>, ParseError> {
         let tk = self.peek().expect("no more tokens").clone();
         match tk.kind() {
             TokenKind::False | TokenKind::True | TokenKind::Nil | TokenKind::Number | TokenKind::String => {
@@ -239,7 +238,7 @@ impl Parser {
                 let expr = self.expr()?;
                 if let Some(tk) = self.peek() {
                     if tk.kind() != &TokenKind::RightParent {
-                        return Err(ExprErr::new(tk,"Expected a ')' token"))
+                        return Err(ParseError::new("Expected a ')' token", &tk))
                     }
                     let _ = self.next();
                 } else {

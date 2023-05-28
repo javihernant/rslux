@@ -1,4 +1,4 @@
-//TODO: Change name of the module to stmt
+//TODO: Change name of the module to ast
 
 pub enum Stmt {
     Print(Expr),
@@ -10,60 +10,9 @@ pub enum Stmt {
     }
 }
 
-pub enum StmtErr {
-    InvalidStmt(String, Token),
-    ExprErr(ExprErr)
-}
+use crate::token::Token;
+use crate::value::Value;
 
-impl Display for StmtErr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            StmtErr::ExprErr(e) => write!(f, "ExprErr: {e}"),
-            StmtErr::InvalidStmt(msg, tk) => {
-                writeln!(f, "invalid statement: {msg}.")?;
-                write!(f, "[line {}]", tk.line())
-            }
-        }
-        
-    }
-}
-
-impl From<ExprErr> for StmtErr {
-    fn from(value: ExprErr) -> Self {
-        StmtErr::ExprErr(value)
-    }
-}
-use std::fmt::Display;
-
-use crate::{token::{Token, TokenKind}, value::Value};
-
-#[derive(Debug)]
-pub struct ExprErr{
-    token_kind: TokenKind,
-    messg: String,
-    line: usize,
-    lexeme: String
-}
-
-impl ExprErr {
-    pub fn new(tk: &Token, messg:&str) -> ExprErr {
-        ExprErr {
-            token_kind: tk.kind().clone(),
-            messg: messg.to_string(),
-            line: tk.line(),
-            lexeme: tk.lexeme().to_string(),
-        }
-    }
-}
-
-impl Display for ExprErr{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.token_kind {
-            TokenKind::Eof => {write!(f, "[line {}] at end: {}", self.line, self.messg)},
-            _ => {write!(f, "[line {}] at '{}': {}", self.line, self.lexeme, self.messg)}
-        }
-    }
-}
 pub enum Expr {
     Assign {
         name: Token,

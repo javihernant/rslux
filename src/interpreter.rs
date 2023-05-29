@@ -1,19 +1,68 @@
 use std::collections::HashMap;
 
 use crate::expr::Expr;
-use crate::token::TokenKind;
+use crate::token::{TokenKind, Token};
 use crate::error::runtime::EvalError;
 use crate::value::Value;
 use crate::expr::Stmt;
 
+struct Environment {
+    enclosing: Option<Box<Environment>>,
+    values: HashMap<String, Value>,
+}
+
+impl Environment {
+    pub fn new(enclosing: Option<Box<Environment>>) -> Environment {
+        Environment {
+            enclosing,
+            values: HashMap::new(),
+        }
+    }
+
+    pub fn define(&mut self, name: String, value:Value) {
+        self.values.insert(name, value);
+    }
+
+    pub fn assign(&mut self, name_tk: &Token, value:Value) -> Result<(), EvalError> {
+        let name = name_tk.lexeme();
+        if self.values.contains_key(name) {
+            self.values.insert(name.to_string(), value);
+            Ok(())
+        } else {
+            match &mut self.enclosing {
+                Some(enclosing) => {
+                    enclosing.assign(name_tk, value)?;
+                    Ok(())
+                },
+                None => {
+                    Err(EvalError::new("Variable is not defined", name_tk))
+                }
+            }
+        }
+    }
+
+    pub fn get(&self, name_tk: &Token) -> Result<Value, EvalError> {
+        match self.values.get(name_tk.lexeme()) {
+            Some(v) => Ok(v.clone()),
+            None => {
+                match &self.enclosing {
+                    Some(enclosing) => {
+                        Ok(enclosing.get(name_tk)?)
+                    },
+                    None => Err(EvalError::new("Variable is not defined", name_tk))
+                }
+            }
+        }
+    }
+}
 pub struct Interpreter {
-    env_vars: HashMap<String, Value>,
+    environment: Environment,
 }
 
 impl Interpreter {
     pub fn new() -> Interpreter {
         Interpreter {
-            env_vars: HashMap::new(),
+            environment: Environment::new(None),
         }
     }
 
@@ -44,7 +93,7 @@ impl Interpreter {
                     },
                     None => Value::Nil
                 };
-                self.env_vars.insert(name.to_string(), val);
+                self.environment.define(name.to_string(), val);
                 Ok(())
             },
         }
@@ -54,10 +103,7 @@ impl Interpreter {
         match expr {
             Expr::Literal(v) => Ok(v.clone()),
             Expr::Variable(var_name) => {
-                match self.env_vars.get(var_name.lexeme()) {
-                    Some(val) => Ok(val.clone()),
-                    None => return Err(EvalError::new(var_name, "Undefined variable"))
-                }
+                Ok(self.environment.get(var_name)?)
             }
             Expr::Binary { left, op, right } => {
                 let mut left = self.eval_expr(left)?;
@@ -66,49 +112,49 @@ impl Interpreter {
                     TokenKind::Minus => {
                         match left.try_sub(&right) {
                             Ok(_) => Ok(left),
-                            Err(msg) => Err(EvalError::new(op, msg))
+                            Err(msg) => Err(EvalError::new(msg, op))
                         }
                     },
                     TokenKind::Plus => {
                         match left.try_sum(&right) {
                             Ok(_) => Ok(left),
-                            Err(msg) => Err(EvalError::new(op, msg))
+                            Err(msg) => Err(EvalError::new(msg, op))
                         }
                     },
                     TokenKind::Slash => {
                         match left.try_div(&right) {
                             Ok(_) => Ok(left),
-                            Err(msg) => Err(EvalError::new(op, msg))
+                            Err(msg) => Err(EvalError::new(msg, op))
                         }
                     },
                     TokenKind::Star => {
                         match left.try_mult(&right) {
                             Ok(_) => Ok(left),
-                            Err(msg) => Err(EvalError::new(op, msg))
+                            Err(msg) => Err(EvalError::new(msg, op))
                         }
                     },
                     TokenKind::Greater => {
                         match left.try_gt(&right) {
                             Ok(b) => Ok(b),
-                            Err(msg) => Err(EvalError::new(op, msg))
+                            Err(msg) => Err(EvalError::new(msg, op))
                         }
                     },
                     TokenKind::GreaterEqual => {
                         match left.try_gte(&right) {
                             Ok(b) => Ok(b),
-                            Err(msg) => Err(EvalError::new(op, msg))
+                            Err(msg) => Err(EvalError::new(msg, op))
                         }
                     },
                     TokenKind::Less => {
                         match left.try_lt(&right) {
                             Ok(b) => Ok(b),
-                            Err(msg) => Err(EvalError::new(op, msg))
+                            Err(msg) => Err(EvalError::new(msg, op))
                         }
                     },
                     TokenKind::LessEqual => {
                         match left.try_lte(&right) {
                             Ok(b) => Ok(b),
-                            Err(msg) => Err(EvalError::new(op, msg))
+                            Err(msg) => Err(EvalError::new(msg, op))
                         }
                     },
                     TokenKind::EqualEqual => {
@@ -129,7 +175,7 @@ impl Interpreter {
                         let mut val = self.eval_expr(right)?;
                         match val.try_neg() {
                             Ok(_) => Ok(val),
-                            Err(msg) => Err(EvalError::new(op, msg)),
+                            Err(msg) => Err(EvalError::new(msg, op)),
                         }
                     },
                     TokenKind::Bang => {
@@ -140,14 +186,9 @@ impl Interpreter {
                 }
             },
             Expr::Assign { name, value } => {
-                let var_name = name.lexeme();
-                if self.env_vars.contains_key(var_name) {
-                    let value = self.eval_expr(value)?;
-                    self.env_vars.insert(var_name.to_string(), value.clone());
-                    Ok(value)
-                } else {
-                    Err(EvalError::new(name, "Undefined variable"))
-                }
+                let value = self.eval_expr(value)?;
+                let _ = self.environment.assign(name, value.clone())?;
+                Ok(value)
             },
         }
     }

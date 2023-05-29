@@ -35,7 +35,7 @@ pub mod runtime {
     }
     
     impl EvalError {
-        pub fn new(token: &Token, messg: &str)->EvalError {
+        pub fn new(messg: &str, token: &Token)->EvalError {
             EvalError {
                 messg: messg.to_string(),
                 token: token.clone(),
@@ -45,7 +45,7 @@ pub mod runtime {
     
     impl Display for EvalError {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            writeln!(f,"[line {}] at '{}': {}",self.token.line(),self.token.lexeme(), self.messg)
+            write!(f,"[line {}] at '{}': {}",self.token.line(),self.token.lexeme(), self.messg)
         }
     }
 }

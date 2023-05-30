@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::cell::RefCell;
 
 use crate::expr::Expr;
 use crate::token::{TokenKind, Token};
@@ -12,13 +13,23 @@ struct Environment {
 }
 
 impl Environment {
-    pub fn new(enclosing: Option<Box<Environment>>) -> Environment {
+    pub fn new() -> Environment {
         Environment {
-            enclosing,
+            enclosing:None,
             values: HashMap::new(),
         }
     }
 
+    pub fn push(self) -> Environment {
+        Environment { 
+            enclosing: Some(Box::new(self)), 
+            values: HashMap::new(), 
+        }
+    }
+
+    pub fn pop(self) -> Environment {
+        *self.enclosing.unwrap()
+    }
     pub fn define(&mut self, name: String, value:Value) {
         self.values.insert(name, value);
     }
@@ -56,13 +67,13 @@ impl Environment {
     }
 }
 pub struct Interpreter {
-    environment: Environment,
+    environment: Option<Environment>,
 }
 
 impl Interpreter {
     pub fn new() -> Interpreter {
         Interpreter {
-            environment: Environment::new(None),
+            environment: Some(Environment::new()),
         }
     }
 
@@ -93,7 +104,26 @@ impl Interpreter {
                     },
                     None => Value::Nil
                 };
-                self.environment.define(name.to_string(), val);
+                self.environment.as_mut().unwrap().define(name.to_string(), val);
+                Ok(())
+            },
+            Stmt::Block(stmts) => {
+                if let Some(e) = self.environment.take() {
+                    self.environment = Some(e.push());
+                }
+                for stmt in stmts {
+                    if let Err(e) = self.eval_stmt(stmt) {
+                        if let Some(e) = self.environment.take() {
+                            self.environment = Some(e.pop());
+                        }
+                        return Err(e);
+                    }
+                }
+                
+                if let Some(e) = self.environment.take() {
+                    self.environment = Some(e.pop());
+                }
+
                 Ok(())
             },
         }
@@ -103,7 +133,7 @@ impl Interpreter {
         match expr {
             Expr::Literal(v) => Ok(v.clone()),
             Expr::Variable(var_name) => {
-                Ok(self.environment.get(var_name)?)
+                Ok(self.environment.as_ref().unwrap().get(var_name)?)
             }
             Expr::Binary { left, op, right } => {
                 let mut left = self.eval_expr(left)?;
@@ -187,12 +217,10 @@ impl Interpreter {
             },
             Expr::Assign { name, value } => {
                 let value = self.eval_expr(value)?;
-                let _ = self.environment.assign(name, value.clone())?;
+                let _ = self.environment.as_mut().unwrap().assign(name, value.clone())?;
                 Ok(value)
             },
         }
     }
-
-    
 }
 

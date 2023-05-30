@@ -113,10 +113,36 @@ impl Parser {
                 let _ = self.next();
                 self.print_stmt()
             },
+            TokenKind::LeftBrace => {
+                let _ = self.next();
+                Ok(Stmt::Block(self.block()?))
+            },
             _ => { 
                 self.expr_stmt()
             },
         }  
+    }
+
+    fn block(&mut self) -> Result<Vec<Stmt>, ParseError> {
+        let mut stmts = Vec::new();
+        while let Some(tk) = self.peek() {
+            match tk.kind() {
+                TokenKind::Eof | TokenKind::RightBrace => break,
+                _ => stmts.push(self.declaration()?)
+                
+            }
+        }
+
+        if self.peek().is_none() {
+            panic!("Eof not found")
+        }
+
+        if let TokenKind::RightBrace = self.peek().unwrap().kind() {
+            let _ = self.next();
+            Ok(stmts)
+        } else {
+            Err(ParseError::new("Expecting '}'", self.peek().unwrap()))
+        }
     }
 
     fn expr_stmt(&mut self) -> Result<Stmt, ParseError> {

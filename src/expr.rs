@@ -7,7 +7,8 @@ pub enum Stmt {
         // name: Token,
         name: String,
         initializer: Option<Expr>,
-    }
+    },
+    Block(Vec<Stmt>),
 }
 
 use crate::token::Token;

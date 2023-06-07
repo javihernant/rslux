@@ -1,6 +1,7 @@
 use crate::error::compiletime::ParseError;
 use crate::expr::{Expr, Stmt};
 use crate::token::{Token, TokenKind};
+use crate::value::Value;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -71,18 +72,6 @@ impl Parser {
             _ => return Err(ParseError::new("expected a variable name", tk)),
         };
 
-        // let name = {
-        //     let tk = self.peek().expect("couldnt get token").clone();
-        //     match self.peek().expect("couldnt get token").kind() {
-        //         TokenKind::Identifier(_) => {
-        //             let _ = self.next();
-        //             tk
-        //         },
-        //         _ => return Err(StmtErr::InvalidStmt("expected a variable name".to_string(), tk))
-        //     }
-        // };
-      
-
         let initializer = match self.peek().expect("couldnt get token").kind() {
             TokenKind::Equal => {
                 let _ = self.next();
@@ -117,10 +106,96 @@ impl Parser {
                 let _ = self.next();
                 Ok(Stmt::Block(self.block()?))
             },
+            TokenKind::If => {
+                let _ = self.next();
+                self.if_stmt()
+            },
+            TokenKind::While => {
+                let _ = self.next();
+                self.while_stmt()
+            },
+            TokenKind::For => {
+                let _ = self.next();
+                self.for_stmt()
+            }
             _ => { 
                 self.expr_stmt()
             },
         }  
+    }
+
+    fn for_stmt(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(TokenKind::LeftParen, "Expected '(' after 'for'.")?;
+        let initializer = match self.peek().unwrap().kind() {
+            TokenKind::Semicolon => {
+                None
+            },
+            TokenKind::Var => {
+                let _ = self.next();
+                Some(self.var_decl()?)
+            },
+            _ => {
+                Some(self.expr_stmt()?)
+            }
+        };
+        let condition = {
+            if let TokenKind::Semicolon = self.peek().unwrap().kind() {
+                Expr::Literal(Value::Bool(true))
+            } else {
+                *self.expr()?
+            }
+        };
+        self.consume(TokenKind::Semicolon, "Expecting ';' after loop condition")?;
+        let increment = {
+            if let TokenKind::Semicolon = self.peek().unwrap().kind() {
+                None
+            } else {
+                Some(self.expr()?)
+            }
+        };
+        self.consume(TokenKind::RightParent, "Expecting ')' after for clauses")?;
+        let mut body =self.stmt()?;
+        if let Some(increment) = increment {
+            body = Stmt::Block( vec![body, Stmt::Expr(*increment)]);
+        }
+        body = Stmt::While { condition, body:Box::new(body)};
+        if let Some(initializer) = initializer {
+            body = Stmt::Block(vec![initializer,body]);
+        }
+        Ok(body)
+    }
+
+    fn while_stmt(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(TokenKind::LeftParen, "Expecting '(' after 'while'")?;
+        let cond = self.expr()?;
+        self.consume(TokenKind::RightParent, "Expecting ')' after condition")?;
+        let body = self.stmt()?;
+        Ok(Stmt::While { condition: *cond, body: Box::new(body) })
+    }
+
+    fn if_stmt(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(TokenKind::LeftParen, "Expect '(' after 'if'")?;
+        let condition = self.expr()?;
+        self.consume(TokenKind::RightParent, "Expect ')' after if condition")?;
+        let then_br = self.stmt()?;
+        let else_br = {
+            if let TokenKind::Else = self.peek().unwrap().kind() {
+                let _ = self.next();
+                Some(Box::new(self.stmt()?))
+            } else {
+                None
+            }
+        };
+        Ok(Stmt::If { condition: *condition, then_br: Box::new(then_br), else_br })
+    }
+
+    fn consume(&mut self, tkind: TokenKind, messg:&str) -> Result<(), ParseError> {
+        if tkind == *self.peek().unwrap().kind() {
+            let _ = self.next();
+            Ok(())
+        } else {
+            Err(ParseError::new(messg, self.peek().unwrap()))
+        }
     }
 
     fn block(&mut self) -> Result<Vec<Stmt>, ParseError> {
@@ -182,7 +257,7 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> Result<Box<Expr>, ParseError> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
         if self.match_token(&[TokenKind::Equal]) {
             let equals = self.next().expect("Couldnt get token");
             if let Expr::Variable(name) = *expr {
@@ -194,6 +269,27 @@ impl Parser {
         }
         Ok(expr)
     }
+
+    fn or(&mut self) -> Result<Box<Expr>, ParseError> {
+        let mut expr = self.and()?;
+        while let TokenKind::Or = self.peek().unwrap().kind() {
+            let op = self.next().unwrap().clone();
+            let right = self.and()?;
+            expr = Box::new(Expr::Logical { left: expr, op, right });
+        }
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> Result<Box<Expr>, ParseError> {
+        let mut expr = self.equality()?;
+        while let TokenKind::And = self.peek().unwrap().kind() {
+            let op = self.next().unwrap().clone();
+            let right = self.equality()?;
+            expr = Box::new(Expr::Logical { left: expr, op, right });
+        }
+        Ok(expr)
+    }
+
 
     fn equality(&mut self) -> Result<Box<Expr>, ParseError> {
         let mut expr = self.comparison()?;

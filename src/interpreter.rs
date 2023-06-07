@@ -126,6 +126,22 @@ impl Interpreter {
 
                 Ok(())
             },
+            Stmt::If { condition, then_br, else_br } => {
+                if self.eval_expr(condition)?.bool() {
+                    self.eval_stmt(then_br)?;
+                } else {
+                    if let Some(else_br) = else_br {
+                        self.eval_stmt(else_br)?;
+                    }
+                }
+                Ok(())
+            }
+            Stmt::While { condition, body } => {
+                while self.eval_expr(condition)?.bool() {
+                    self.eval_stmt(body)?;
+                }
+                Ok(())
+            },
         }
     }
 
@@ -219,6 +235,23 @@ impl Interpreter {
                 let value = self.eval_expr(value)?;
                 let _ = self.environment.as_mut().unwrap().assign(name, value.clone())?;
                 Ok(value)
+            },
+            Expr::Logical { left, op, right } => {
+                let left = self.eval_expr(left)?;
+                match op.kind() {
+                    TokenKind::And => {
+                        if left.bool() == false {
+                            return Ok(left)
+                        }
+                    },
+                    TokenKind::Or => {
+                        if left.bool() == true {
+                            return Ok(left)
+                        }
+                    },
+                    _ => unreachable!(),
+                }
+                Ok(self.eval_expr(right)?)
             },
         }
     }

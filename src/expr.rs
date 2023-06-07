@@ -8,6 +8,15 @@ pub enum Stmt {
         name: String,
         initializer: Option<Expr>,
     },
+    If {
+        condition: Expr,
+        then_br: Box<Stmt>,
+        else_br: Option<Box<Stmt>>,
+    },
+    While {
+        condition: Expr,
+        body: Box<Stmt>,
+    },
     Block(Vec<Stmt>),
 }
 
@@ -20,6 +29,11 @@ pub enum Expr {
         value: Box<Expr>,
     },
     Binary {
+        left: Box<Expr>,
+        op: Token,
+        right: Box<Expr>,
+    },
+    Logical {
         left: Box<Expr>,
         op: Token,
         right: Box<Expr>,
